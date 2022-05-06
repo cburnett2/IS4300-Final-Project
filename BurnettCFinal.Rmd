@@ -1,0 +1,95 @@
+
+---
+title: "BurnettC Final"
+author: "Clay Burnett"
+date: "5/6/2022"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+# Required Packages:
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org") # We need this for ggplot2 functions.'
+
+if(!require(dslabs)) install.packages("dslabs", repos = "http://cran.us.r-project.org") # We need this for the heights data.
+
+if(!require(readr)) install.packages("readr", repos = "http://cran.us.r-project.org") # We need this for the heights data.
+
+```
+
+## Introduction: Predicting male vs female 
+
+This report will use the "survey" data. This is a data set contains responses of 237 Statistics students at the University of AdelaideIn  to a number of questions. In this report we will be examining height (the height of the student) wr.hnd (the span of the students writing hand in centimeters), and sex (the sex of the student). This report we will be using machine learning to determine if a given student is male or female. We will test our accuracy using three factors, Accuracy (the number correctly predicted divided by the total), Sensitivity (predicted female vs actual female), and specificity (predicted male vs actual male). Our first trial will use one predictor and our second trial will attempt to improve on the first using two predictors.
+
+## Model 1 Vizualization
+```{r,include=FALSE}
+#Creating a visualization based on only height
+survey <- read_csv("survey.csv")
+surveyDF <- as.data.frame(survey)
+surveyDF$Sex <- as.factor(surveyDF$Sex)
+```
+``` {r echo=FALSE}
+p <- surveyDF %>% ggplot()
+p + geom_point(aes(Height,Wr.Hnd,col = Sex)) +
+  geom_vline(xintercept = 174)
+```
+
+Using height and wr.hnd we can see a pretty clear split in the data. We elect to start with height and after some trial and error establish that 174 is a spot for our deciding line. 
+
+## Model 1 Results 
+```{r,echo=FALSE}
+# checking our metrics using height
+surveyDF$predicted <- ifelse(surveyDF$Height < 174,0,1)
+T <- table(Predict = surveyDF$predicted,Actual = surveyDF$Sex)
+T
+T <- as.vector(T)
+# Accuracy of the prediction is (num. correctly predicted)/(total)
+accuracy <- (T[1]+T[4])/(T[1]+T[2]+T[3]+T[4]) # correct/total
+# Sensitivity is Pr(predict 1 given actually 1) = 
+sensitivity <- T[4]/(T[3]+T[4])
+# Specificity is Pr(predict 0 given actually 0) = 
+specificity <- T[1]/(T[1]+T[2])
+metric <- c("Accuracy","Sensitivity","Specificity")
+value <- c(accuracy,sensitivity,specificity)
+data.frame(Metric = metric,Value = round(value,3))
+# we can see that we have one metric above 90 so we move on to two predictors
+```
+
+For our first trial we get an excellent specificity. This is expected and can be seen in our plot as almost all of the points above 174 are male. This is good but we would like to improve on the other numbers. 
+
+## Model 2 visualization
+```{r,echo=FALSE}
+# visualization using height and wr.hnd
+p <- surveyDF %>% ggplot()
+p + geom_point(aes(Height,Wr.Hnd,col = Sex)) +
+  geom_hline(yintercept= 20)+
+  geom_vline(xintercept = 174)
+```
+
+We will now incorporate the writing hand data into our prediction and again after some trial and error have chosen 20 to be our deciding point. 
+
+## Model 2 results 
+```{r,echo=FALSE}
+#checking our metrics using height and wr.hnd
+surveyDF$prediction <- ifelse(surveyDF$Height <= 174 & surveyDF$Wr.Hnd <= 20,"Female","Male")
+T <- table(Predicted = surveyDF$prediction,Actual=surveyDF$Sex)
+T
+T <- as.vector(T)
+# Accuracy of the prediction is (num. correctly predicted)/(total)
+accuracy <- (T[1]+T[4])/(T[1]+T[2]+T[3]+T[4]) # correct/total
+# Sensitivity is Pr(predict 1 given actually 1) = 
+sensitivity <- T[4]/(T[3]+T[4])
+# Specificity is Pr(predict 0 given actually 0) = 
+specificity <- T[1]/(T[1]+T[2])
+metric <- c("Accuracy","Sensitivity","Specificity")
+value <- c(accuracy,sensitivity,specificity)
+data.frame(Metric = metric,Value = round(value,3))
+```
+
+These numbers look much better as there is not as much disparity between them. We maintained a high number for specificity and increased both other metrics. The biggest thing we accomplished here was raising our sensitivity from .726 to .813.
+
+## Conclusion
+We used height for our first predictor stating that if height was less than 174 we would classify the point as female. This gave us the metrics of Accuracy .827, Sensitivity .726, and Specificity .931. These are decent metrics but we would like to improve specifically on sensitivity. In our second test we incorporated the span of the writing hand stating that we would predict female if height was below 174 and the span of the writing hand was below 20, and for all other points predict male. This gave us the metrics of Accuracy .862, Sensitivity .813, and Specificity .913. While these metrics are not perfect they are much better than our first trial and by sacrificing only a little specificity we improved both accuracy and sensitivity. Ideally we would like to have all three predictors above .9 but for this particular data set the sample size causes a few outliers to have a large affect on our numbers. 
